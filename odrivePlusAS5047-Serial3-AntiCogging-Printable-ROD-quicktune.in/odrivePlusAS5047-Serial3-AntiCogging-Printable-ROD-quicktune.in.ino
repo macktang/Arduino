@@ -86,7 +86,7 @@ void Odrivesetup() {
     // This ends up writing something like "w axis0.motor.config.current_lim 10.0\n"
   }
 
-//  Serial.println("Ready!");
+  Serial.println("Ready!");
 //  Serial.println("Send the character '0' or '1' to calibrate respective motor (you must do this before you can command movement)");
 //  Serial.println("Send the character 's' to exectue test move");
 //  Serial.println("Send the character 'b' to read bus voltage");
@@ -242,13 +242,13 @@ void Odriveloop() {
             Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << myCurrent << '\n';
 //            Serial.println(abs(myPos - prevPos),6);
 //            loopCount += 1;
-//            Serial.print(myPos);
-//            Serial.print(",");
-//            Serial.print(myCurrent,4);
-//            Serial.print(",");
-            Serial.println(myError,8);
-//            Serial.print(",");
-//            Serial.println(mySpeedDampen,4);
+            Serial.print(myPos);
+            Serial.print(",");
+            Serial.print(myCurrent,4);
+            Serial.print(",");
+            Serial.print(myError,8);
+            Serial.print(",");
+            Serial.println(mySpeedDampen,4);
           }
           else{
             Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << -0.15f << '\n';
@@ -557,4 +557,3 @@ static inline int8_t sgn(int val) {
  if (val==0) return 0;
  return 1;
 }
-
