@@ -1,6 +1,6 @@
 float Kp;
 float Kd;
-float Ki;
+//float Ki;
 
 void setup() {
   // put your setup code here, to run once:
@@ -41,13 +41,18 @@ void tuningRoutine()
         case 'p':
           if(cmd=='+'){Kp+=1; Serial.print("Kp increased to "); Serial.println(Kp);}
           if(cmd=='-'){Kp-=1; Serial.print("Kp decreased to "); Serial.println(Kp);}
+          break;
+        case 'd':
+          if(cmd='+'){Kd+=1; Serial.print("Kd incresed to "); Serial.println(Kd);}
+          if(cmd=='-'){Kd-=1; Serial.print("Kd decreased to "); Serial.println(Kd);}
+          break;
       }
     }
 }
 
 void readTuning()
 {
-  Serial.print("Kp:");       Serial.print(Kp,8);
-  Serial.print("   Ki:");       Serial.print(Ki,8);
-  Serial.print("   Kd:");       Serial.println(Kd,8);
+  Serial.print("Kp:");    Serial.print(Kp,8);
+//  Serial.print("   Ki:"); Serial.print(Ki,8);
+  Serial.print("   Kd:"); Serial.println(Kd,8);
 }
