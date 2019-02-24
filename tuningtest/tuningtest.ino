@@ -1,12 +1,31 @@
+// This program demonstrates capability to
+// quickly tune Kp, Ki, and Kd constants
+// in PID control, without need
+// to recompile code in between.
+
+// Instructions to run
+// 1) Open in Arduino IDE
+// 2) Upload code, open Serial Monitor
+
+// Example usages
+// PURPOSE                COMMAND OVER SERIAL
+// set Kp = 0.0156        wkp.015
+// set Kd = -6.102        wkd-6.102
+// increment Kp += qq     kp+
+// decrement Kp -= qq     kd-
+// set qq = 0.005         wqq.005
+// print Kp, Kd, qq       r
+// "run motors"           m
+
 float Kp;
 float Kd;
 //float Ki;
-float q = 0.1; //value to increment Kp and Kd by
+float qq = 0.1; //value to increment Kp and Kd by
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial.println("hello");
+  Serial.println("setup complete");
 }
 
 void loop() {
@@ -17,7 +36,7 @@ void loop() {
 
     if (c == 'm'){Serial.println("motor running");}
     
-    if (c == 't'){
+    if (c == 'k'){
       Serial.flush();
       delay(10);
       tuningRoutine();
@@ -39,12 +58,12 @@ void tuningRoutine(){
     char cmd = Serial.read();
     switch(param){
       case 'p':
-        if(cmd=='+'){Kp+=q; Serial.print("Kp increased to "); Serial.println(Kp,8);}
-        if(cmd=='-'){Kp-=q; Serial.print("Kp decreased to "); Serial.println(Kp,8);}
+        if(cmd=='+'){Kp+=qq; Serial.print("Kp increased to "); Serial.println(Kp,8);}
+        if(cmd=='-'){Kp-=qq; Serial.print("Kp decreased to "); Serial.println(Kp,8);}
         break;
       case 'd':
-        if(cmd=='+'){Kd+=q; Serial.print("Kd increased to "); Serial.println(Kd,8);}
-        if(cmd=='-'){Kd-=q; Serial.print("Kd decreased to "); Serial.println(Kd,8);}
+        if(cmd=='+'){Kd+=qq; Serial.print("Kd increased to "); Serial.println(Kd,8);}
+        if(cmd=='-'){Kd-=qq; Serial.print("Kd decreased to "); Serial.println(Kd,8);}
         break;
     }
   }
@@ -52,29 +71,19 @@ void tuningRoutine(){
 
 void writeRoutine(){  
   if(Serial.available()){
-    Serial.print("pid parameter writing mode active...");                
-    char param = Serial.read();
+    Serial.print("pid parameter writing mode active...");
+    char param1 = Serial.read();
+    char param2 = Serial.read();
     String s1 = Serial.readString();
 
-    switch(param){
-      case 'p':
-        Kp = s1.toFloat();
-        Serial.print("Kp set to: "); Serial.println(Kp,8);
-        break;
-      case 'd':
-        Kd = s1.toFloat();
-        Serial.print("Kd set to: "); Serial.println(Kd,8);
-        break;
-      case 'q':
-        q = s1.toFloat();
-        Serial.print("q (increment value) set to: "); Serial.println(q,8);
-        break;
-    }
+    if(param1=='k'&&param2=='p'){Kp = s1.toFloat(); Serial.println(Kp,8);}
+    if(param1=='k'&&param2=='d'){Kd = s1.toFloat(); Serial.println(Kd,8);}
+    if(param1=='q'&&param2=='q'){qq = s1.toFloat(); Serial.println(qq,8);}
   }
 }
 
 void readTuning(){
   Serial.print("Kp:");    Serial.print(Kp,8);
-  Serial.print("   q:"); Serial.print(q,8);
-  Serial.print("   Kd:"); Serial.println(Kd,8);
+  Serial.print("   Kd:"); Serial.print(Kd,8);
+  Serial.print("   qq:"); Serial.println(qq,8);
 }
