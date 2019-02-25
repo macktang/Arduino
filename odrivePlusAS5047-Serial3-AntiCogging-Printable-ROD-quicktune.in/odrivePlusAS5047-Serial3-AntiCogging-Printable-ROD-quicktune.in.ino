@@ -55,8 +55,16 @@ unsigned int reading = 0;
 // ******* PID CONSTANTS **************************************** PID CONSTANTS ******************
 float Kp = .002853;
 float Kd = .015;
+////float Ki;
+//float qq = 0.1; //value to increment Kp and Kd by
+
+//float Kp = .0022;
+//float Kd = 0.0;
 //float Ki;
 float qq = 0.1; //value to increment Kp and Kd by
+//int sp = 5361; // before longer cup pendulum
+int sp = 5348; // measured from cup via gravity - 180
+int rr = 30; // keep trying while within +/- rr degrees around sp
 
 void setup() {
   // put your setup code here, to run once:
@@ -217,12 +225,13 @@ void Odriveloop() {
 //        odrive.run_state(motornum, requested_state, true); // don't wait
 
 //        Serial.println(FastAS5047D_Read());
-//        Serial.print("STARTING!!!!!!======================================================");
-//        delay(1000);
-//        Serial.print("2");
-//        delay(1000);
-//        Serial.println("1");
-//        delay(1000);
+        Serial.print("STARTING!!!!!!======================================================");
+        delay(1000);
+        Serial.print("2");
+        delay(1000);
+        Serial.println("1");
+        delay(1000);
+        readTuning();
         int myPos; //can read() just return as an int?
         int prevPos = FastAS5047D_Read();
         int prevPos2 = FastAS5047D_Read();
@@ -232,20 +241,28 @@ void Odriveloop() {
         float myCurrent;
         unsigned long loop_start_time = millis();
         unsigned long loop_current_time = millis();
+
+        int upper = sp + rr/.0219726563;
+        int lower = sp - rr/.0219726563;
+
+        Serial.println(upper);
+        Serial.println(lower);
+
+//        ((loop_current_time - loop_start_time) < 12000)
         
-        while( (loop_current_time - loop_start_time) < 12000 ){
+        while( 1 ){
           // if within +-10 degrees of balanced
           myPos = FastAS5047D_Read();
-          if ( myPos >= 4061 && myPos <= 6791 ){
+          if ( (myPos >= lower && myPos <= upper) || myPos == 0){
 //            myError = (myPos-6560)*0.0003834951969714103074295218974*0.19;
 //            myError = -(myPos-5361)*.00317;
-            myError = -(myPos-5361)* Kp;
+            myError = -(myPos-sp)* Kp;
             mySpeedDampen = ( abs(prevPos2 - prevPos) + abs(myPos - prevPos) )/2 *Kd;
 //            mySpeedDampen = abs(myPos - prevPos);
 //            Serial.println( (myPos-6443)*0.0003834951969714103074295218974*.18 ,7);
 //            Serial.println(myError,7);
 //            myCurrent = -myError * 360. / 8.27 - mySpeedDampen*sgn(myPos-5361);
-            myCurrent = myError + mySpeedDampen*sgn(myPos-5361);
+            myCurrent = myError + mySpeedDampen*sgn(myPos-sp);
 //            myCurrent = -myError * 360. / 8.27;
 //            myCurrent = -myError * 360. / 8.27 - 0.15;
             if (myCurrent > 18.0){
@@ -271,6 +288,8 @@ void Odriveloop() {
           }
           else{
             Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << 0.0f << '\n';
+//            Serial.print("out of bounds ");
+//            Serial.println(myPos);
             break;
 //            Serial.println(0.0);
           }
@@ -459,12 +478,16 @@ void writeRoutine(){
     if(param1=='k'&&param2=='p'){Kp = s1.toFloat(); Serial.println(Kp,8);}
     if(param1=='k'&&param2=='d'){Kd = s1.toFloat(); Serial.println(Kd,8);}
     if(param1=='q'&&param2=='q'){qq = s1.toFloat(); Serial.println(qq,8);}
+    if(param1=='s'&&param2=='p'){sp = s1.toInt(); Serial.println(sp);}
+    if(param1=='r'&&param2=='r'){rr = s1.toInt(); Serial.println(rr);}
   }
 }
 
 void readTuning(){
   Serial.print("Kp:");    Serial.print(Kp,8);
   Serial.print("   Kd:"); Serial.print(Kd,8);
+  Serial.print("   sp:"); Serial.print(sp);
+  Serial.print("   rr:"); Serial.print(rr);
   Serial.print("   qq:"); Serial.println(qq,8);
 }
 
