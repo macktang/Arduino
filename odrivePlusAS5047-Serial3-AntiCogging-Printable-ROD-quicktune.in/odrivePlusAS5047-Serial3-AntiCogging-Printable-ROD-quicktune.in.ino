@@ -7,7 +7,6 @@
 //
 //brown - clock = GRAY
 
-
 // ***************Odrive includes
 #include <SoftwareSerial.h>
 #include <ODriveArduino.h>
@@ -52,6 +51,12 @@ unsigned int reading = 0;
 #define WR  0x3F    //bit 14 ="0" is Write
 
 //Op Arduino: D10 CS, D11 MOSI, D12 MISO, D13 SCK
+
+// ******* PID CONSTANTS **************************************** PID CONSTANTS ******************
+float Kp = .002853;
+float Kd = .015;
+//float Ki;
+float qq = 0.1; //value to increment Kp and Kd by
 
 void setup() {
   // put your setup code here, to run once:
@@ -173,6 +178,20 @@ void Odriveloop() {
         Serial.println("done");
     }
 
+    if(c =='r'){readTuning();}
+    
+    if (c == 'k'){
+      Serial.flush();
+      delay(10);
+      tuningRoutine();
+    }
+
+    if (c == 'w'){
+      Serial.flush();
+      delay(10);
+      writeRoutine();
+    }
+
     // custom move
     if (c == 'm') {
 //      odrive_serial << "r vbus_voltage\n";
@@ -198,12 +217,12 @@ void Odriveloop() {
 //        odrive.run_state(motornum, requested_state, true); // don't wait
 
 //        Serial.println(FastAS5047D_Read());
-        Serial.print("STARTING!!!!!!======================================================");
-        delay(1000);
-        Serial.print("2");
-        delay(1000);
-        Serial.println("1");
-        delay(1000);
+//        Serial.print("STARTING!!!!!!======================================================");
+//        delay(1000);
+//        Serial.print("2");
+//        delay(1000);
+//        Serial.println("1");
+//        delay(1000);
         int myPos; //can read() just return as an int?
         int prevPos = FastAS5047D_Read();
         int prevPos2 = FastAS5047D_Read();
@@ -220,13 +239,13 @@ void Odriveloop() {
           if ( myPos >= 4061 && myPos <= 6791 ){
 //            myError = (myPos-6560)*0.0003834951969714103074295218974*0.19;
 //            myError = -(myPos-5361)*.00317;
-            myError = -(myPos-5361)*.002853;
-            mySpeedDampen = ( abs(prevPos2 - prevPos) + abs(myPos - prevPos) )/2 *.015;
+            myError = -(myPos-5361)* Kp;
+            mySpeedDampen = ( abs(prevPos2 - prevPos) + abs(myPos - prevPos) )/2 *Kd;
 //            mySpeedDampen = abs(myPos - prevPos);
 //            Serial.println( (myPos-6443)*0.0003834951969714103074295218974*.18 ,7);
 //            Serial.println(myError,7);
 //            myCurrent = -myError * 360. / 8.27 - mySpeedDampen*sgn(myPos-5361);
-            myCurrent = myError + mySpeedDampen*sgn(myPos-5361) - 0.15;
+            myCurrent = myError + mySpeedDampen*sgn(myPos-5361);
 //            myCurrent = -myError * 360. / 8.27;
 //            myCurrent = -myError * 360. / 8.27 - 0.15;
             if (myCurrent > 18.0){
@@ -251,7 +270,7 @@ void Odriveloop() {
             Serial.println(mySpeedDampen,4);
           }
           else{
-            Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << -0.15f << '\n';
+            Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << 0.0f << '\n';
             break;
 //            Serial.println(0.0);
           }
@@ -391,9 +410,63 @@ void AS5047loop()
 
 
 
+//******************************* PID quick tuning functions **********
+// Mack Tang 2-24-2019
+// This program demonstrates capability to
+// quickly tune Kp, Ki, and Kd constants
+// in PID control, without need
+// to recompile code in between.
 
+// Instructions to run
+// 1) Open in Arduino IDE
+// 2) Upload code, open Serial Monitor
 
+// Example usages
+// PURPOSE                COMMAND OVER SERIAL
+// set Kp = 0.0156        wkp.015
+// set Kd = -6.102        wkd-6.102
+// increment Kp += qq     kp+
+// decrement Kp -= qq     kd-
+// set qq = 0.005         wqq.005
+// print Kp, Kd, qq       r
+// "run motors"           m
 
+void tuningRoutine(){  
+  if(Serial.available()){
+    Serial.print("tuning mode active...");                
+    char param = Serial.read();
+    char cmd = Serial.read();
+    switch(param){
+      case 'p':
+        if(cmd=='+'){Kp+=qq; Serial.print("Kp increased to "); Serial.println(Kp,8);}
+        if(cmd=='-'){Kp-=qq; Serial.print("Kp decreased to "); Serial.println(Kp,8);}
+        break;
+      case 'd':
+        if(cmd=='+'){Kd+=qq; Serial.print("Kd increased to "); Serial.println(Kd,8);}
+        if(cmd=='-'){Kd-=qq; Serial.print("Kd decreased to "); Serial.println(Kd,8);}
+        break;
+    }
+  }
+}
+
+void writeRoutine(){  
+  if(Serial.available()){
+    Serial.print("pid parameter writing mode active...");
+    char param1 = Serial.read();
+    char param2 = Serial.read();
+    String s1 = Serial.readString();
+
+    if(param1=='k'&&param2=='p'){Kp = s1.toFloat(); Serial.println(Kp,8);}
+    if(param1=='k'&&param2=='d'){Kd = s1.toFloat(); Serial.println(Kd,8);}
+    if(param1=='q'&&param2=='q'){qq = s1.toFloat(); Serial.println(qq,8);}
+  }
+}
+
+void readTuning(){
+  Serial.print("Kp:");    Serial.print(Kp,8);
+  Serial.print("   Kd:"); Serial.print(Kd,8);
+  Serial.print("   qq:"); Serial.println(qq,8);
+}
 
 
 

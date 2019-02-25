@@ -1,3 +1,4 @@
+// Mack Tang 2-24-2019
 // This program demonstrates capability to
 // quickly tune Kp, Ki, and Kd constants
 // in PID control, without need
@@ -9,7 +10,7 @@
 
 // Example usages
 // PURPOSE                COMMAND OVER SERIAL
-// set Kp = 0.0156        wkp.015
+// set Kp = 0.0156        wkp.0156
 // set Kd = -6.102        wkd-6.102
 // increment Kp += qq     kp+
 // decrement Kp -= qq     kd-
