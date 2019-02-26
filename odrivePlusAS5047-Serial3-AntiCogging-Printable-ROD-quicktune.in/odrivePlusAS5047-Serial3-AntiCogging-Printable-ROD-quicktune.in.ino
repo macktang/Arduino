@@ -53,8 +53,10 @@ unsigned int reading = 0;
 //Op Arduino: D10 CS, D11 MOSI, D12 MISO, D13 SCK
 
 // ******* PID CONSTANTS **************************************** PID CONSTANTS ******************
-float Kp = .00287; // appears like not high enough gain g04
+//float Kp = .00287; // appears like not high enough gain g04
+float Kp = .0035; // appears like not high enough gain g04
 float Kd = .015;
+float Ki = 0.00001;
 ////float Ki;
 //float qq = 0.1; //value to increment Kp and Kd by
 
@@ -214,18 +216,7 @@ void Odriveloop() {
         
         my_axis = 0;
         control_mode = 1; // CURRENT CONTROL
-
-//        requested_state = ODriveArduino::AXIS_STATE_IDLE;
-//        Serial << "Axis" << my_axis << ": Requesting state " << requested_state << '\n';
-//        odrive.run_state(motornum, requested_state, true); // don't wait
-
-//        Serial1 << "w axis" << my_axis << ".controller.config.control_mode " << control_mode << '\n';
-//
-//        requested_state = ODriveArduino::AXIS_STATE_CLOSED_LOOP_CONTROL;
-//        Serial << "Axis" << my_axis << ": Requesting state " << requested_state << '\n';
-//        odrive.run_state(motornum, requested_state, true); // don't wait
-
-//        Serial.println(FastAS5047D_Read());
+        
         Serial.print("STARTING!!!!!!======================================================");
         delay(1000);
         Serial.print("2");
@@ -233,13 +224,16 @@ void Odriveloop() {
         Serial.println("1");
         delay(1000);
         readTuning();
-        int myPos; //can read() just return as an int?
+        int myPos = FastAS5047D_Read(); //can read() just return as an int?
         int prevPos = FastAS5047D_Read();
         int prevPos2 = FastAS5047D_Read();
-//        unsigned int loopCount = 0;
-        float mySpeedDampen;
-        float myError;
-        float myCurrent;
+        unsigned int loopCount = 0;
+        float mySpeedDampen=0.0;
+        float rawError = 0.0;
+        float myError = 0.0;
+        float integral = 0.0;
+        float myIntegralOut = 0.0;
+        float myCurrent = 0.0;
         unsigned long loop_start_time = millis();
         unsigned long loop_current_time = millis();
 
@@ -263,18 +257,24 @@ void Odriveloop() {
             Serial.print(",");
             Serial.print(myError,8);
             Serial.print(",");
-            Serial.println(mySpeedDampen,4);
+            Serial.print(mySpeedDampen,4);
+            Serial.print(",");
+            Serial.println(myIntegralOut,8);
           }
           else if ( (myPos >= lower && myPos <= upper)){
 //            myError = (myPos-6560)*0.0003834951969714103074295218974*0.19;
 //            myError = -(myPos-5361)*.00317;
-            myError = -(myPos-sp)* Kp;
+            // p and i terms both have a negative sign, can be reduced
+            rawError = myPos-sp;
+            myError = -(rawError)* Kp;
+            integral += rawError;
+            myIntegralOut = -integral * Ki;
             mySpeedDampen = ( abs(prevPos2 - prevPos) + abs(myPos - prevPos) )/2 *Kd;
 //            mySpeedDampen = abs(myPos - prevPos);
 //            Serial.println( (myPos-6443)*0.0003834951969714103074295218974*.18 ,7);
 //            Serial.println(myError,7);
 //            myCurrent = -myError * 360. / 8.27 - mySpeedDampen*sgn(myPos-5361);
-            myCurrent = myError + mySpeedDampen*sgn(myPos-sp);
+            myCurrent = myError + mySpeedDampen*sgn(myPos-sp) + myIntegralOut;
 //            myCurrent = -myError * 360. / 8.27;
 //            myCurrent = -myError * 360. / 8.27 - 0.15;
             if (myCurrent > 18.0){
@@ -289,17 +289,23 @@ void Odriveloop() {
 //            Serial.println(myCurrent);
             Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << myCurrent << '\n';
 //            Serial.println(abs(myPos - prevPos),6);
-//            loopCount += 1;
+            loopCount += 1;
             Serial.print(myPos);
             Serial.print(",");
             Serial.print(myCurrent,4);
             Serial.print(",");
             Serial.print(myError,8);
             Serial.print(",");
-            Serial.println(mySpeedDampen,4);
+            Serial.print(mySpeedDampen,4);
+            Serial.print(",");
+            Serial.println(myIntegralOut,8);
           }
           else{
             Serial1 << "w axis" << my_axis << ".controller.current_setpoint " << 0.0f << '\n';
+            loop_current_time = millis();
+            Serial.print("Balance time: "); Serial.print(loop_current_time - loop_start_time);
+            Serial.print(" Number of samples: "); Serial.print(loopCount);
+            Serial.print(" Loop samples/sec: "); Serial.println(float(loopCount) / (loop_current_time - loop_start_time) * 1000 );
 //            Serial.print("out of bounds ");
 //            Serial.println(myPos);
             break;
@@ -472,6 +478,10 @@ void tuningRoutine(){
         if(cmd=='+'){Kp+=qq; Serial.print("Kp increased to "); Serial.println(Kp,8);}
         if(cmd=='-'){Kp-=qq; Serial.print("Kp decreased to "); Serial.println(Kp,8);}
         break;
+      case 'i':
+        if(cmd=='+'){Ki+=qq; Serial.print("Ki increased to "); Serial.println(Ki,8);}
+        if(cmd=='-'){Ki-=qq; Serial.print("Ki decreased to "); Serial.println(Ki,8);}
+        break;
       case 'd':
         if(cmd=='+'){Kd+=qq; Serial.print("Kd increased to "); Serial.println(Kd,8);}
         if(cmd=='-'){Kd-=qq; Serial.print("Kd decreased to "); Serial.println(Kd,8);}
@@ -488,6 +498,7 @@ void writeRoutine(){
     String s1 = Serial.readString();
 
     if(param1=='k'&&param2=='p'){Kp = s1.toFloat(); Serial.println(Kp,8);}
+    if(param1=='k'&&param2=='i'){Ki = s1.toFloat(); Serial.println(Ki,8);}
     if(param1=='k'&&param2=='d'){Kd = s1.toFloat(); Serial.println(Kd,8);}
     if(param1=='q'&&param2=='q'){qq = s1.toFloat(); Serial.println(qq,8);}
     if(param1=='s'&&param2=='p'){sp = s1.toInt(); Serial.println(sp);}
@@ -498,6 +509,7 @@ void writeRoutine(){
 void readTuning(){
   Serial.print("Kp:");    Serial.print(Kp,8);
   Serial.print("   Kd:"); Serial.print(Kd,8);
+  Serial.print("   Ki:"); Serial.print(Ki,8);
   Serial.print("   sp:"); Serial.print(sp);
   Serial.print("   rr:"); Serial.print(rr);
   Serial.print("   qq:"); Serial.println(qq,8);
