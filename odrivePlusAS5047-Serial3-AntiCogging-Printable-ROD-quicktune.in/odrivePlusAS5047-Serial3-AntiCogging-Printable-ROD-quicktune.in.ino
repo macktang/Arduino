@@ -53,7 +53,7 @@ unsigned int reading = 0;
 //Op Arduino: D10 CS, D11 MOSI, D12 MISO, D13 SCK
 
 // ******* PID CONSTANTS **************************************** PID CONSTANTS ******************
-float Kp = .002853;
+float Kp = .00287; // appears like not high enough gain g04
 float Kd = .015;
 ////float Ki;
 //float qq = 0.1; //value to increment Kp and Kd by
@@ -63,7 +63,8 @@ float Kd = .015;
 //float Ki;
 float qq = 0.1; //value to increment Kp and Kd by
 //int sp = 5361; // before longer cup pendulum
-int sp = 5348; // measured from cup via gravity - 180
+//int sp = 5348; // measured from cup via gravity - 180
+int sp = 5440; // measured by balancing for a few seconds manaually //g0402
 int rr = 30; // keep trying while within +/- rr degrees around sp
 
 void setup() {
@@ -253,7 +254,18 @@ void Odriveloop() {
         while( 1 ){
           // if within +-10 degrees of balanced
           myPos = FastAS5047D_Read();
-          if ( (myPos >= lower && myPos <= upper) || myPos == 0){
+
+          if (myPos == 0){
+            // bad reading, just do nothing for this loop
+            Serial.print(myPos);
+            Serial.print(",");
+            Serial.print(myCurrent,4);
+            Serial.print(",");
+            Serial.print(myError,8);
+            Serial.print(",");
+            Serial.println(mySpeedDampen,4);
+          }
+          else if ( (myPos >= lower && myPos <= upper)){
 //            myError = (myPos-6560)*0.0003834951969714103074295218974*0.19;
 //            myError = -(myPos-5361)*.00317;
             myError = -(myPos-sp)* Kp;
